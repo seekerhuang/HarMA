@@ -66,7 +66,7 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
     else:
         metric_logger.add_meter('loss_contr', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
         metric_logger.add_meter('loss_triplet', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
-        metric_logger.add_meter('loss_mmd', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
+        # metric_logger.add_meter('loss_mmd', utils.SmoothedValue(window_size=1, fmt='{value:.4f}'))
     header = 'Train Epoch: [{}]'.format(epoch)
     print_freq = 50
     step_size = 100
@@ -86,8 +86,8 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
             loss_triplet = model(image, text_input.input_ids)
             loss = loss_triplet
         else:
-            loss_contr,loss_triplet,loss_mmd = model(image, text_input, idx=idx, label=label)
-            loss = loss_contr + loss_triplet + 0.5*loss_mmd
+            loss_contr,loss_triplet,_ = model(image, text_input, idx=idx, label=label)
+            loss = loss_contr + loss_triplet 
             # fake_loss = 0.0
             # for param in model.parameters():
             #     fake_loss += torch.sum(param)
@@ -113,8 +113,8 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
             metric_logger.update(loss_triplet=loss_triplet.item())
         else:
             metric_logger.update(loss_contr=loss_contr.item())
-            metric_logger.update(loss_triplet=0.4*loss_triplet.item())
-            metric_logger.update(loss_mmd=loss_mmd.item())
+            metric_logger.update(loss_triplet=loss_triplet.item())
+            # metric_logger.update(loss_mmd=loss_mmd.item())
             
 
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
