@@ -269,12 +269,14 @@ class Transformer(nn.Module):
             act_layer: Callable = nn.GELU,
             norm_layer: Callable = nn.LayerNorm,
             mmadapter:nn.Module = None,
-            mmadapter_aux:nn.Module = None
+            mmadapter_aux:nn.Module = None,
+            align_before:bool = False
     ):
         super().__init__()
         self.width = width
         self.layers = layers
         self.grad_checkpointing = False
+        self.align_before = align_before
 
         self.resblocks = nn.ModuleList([
             ResidualAttentionBlock(
@@ -286,12 +288,26 @@ class Transformer(nn.Module):
         return self.resblocks[0].mlp.c_fc.weight.dtype
 
     def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
-        for r in self.resblocks:
+        intermediates = []  # save mid-layer features 
+        num_resblocks = len(self.resblocks)
+        for i, r in enumerate(self.resblocks):
             if self.grad_checkpointing and not torch.jit.is_scripting():
                 x = checkpoint(r, x, attn_mask)
             else:
                 x = r(x, attn_mask=attn_mask)
+                if self.align_before:
+                    if x is not None and i >= 5 and i < num_resblocks - 1:  # from 6th to 11th layer
+                        intermediates.append(x)
+        if self.align_before:            
+            return x, intermediates
+                
         return x
+        # for r in self.resblocks:
+        #     if self.grad_checkpointing and not torch.jit.is_scripting():
+        #         x = checkpoint(r, x, attn_mask)
+        #     else:
+        #         x = r(x, attn_mask=attn_mask)
+        # return x
 
 
 class VisionTransformer(nn.Module):
@@ -310,10 +326,14 @@ class VisionTransformer(nn.Module):
             mmadapter:nn.ModuleList = None,
             mmadapter_aux:nn.ModuleList = None,
             modalemb:nn.Module = None,
+            align_before:bool = False,
     ):
         super().__init__()
         self.image_size = to_2tuple(image_size)
         self.patch_size = to_2tuple(patch_size)
+
+        self.align_before = align_before
+
         self.grid_size = (self.image_size[0] // self.patch_size[0], self.image_size[1] // self.patch_size[1])
         self.output_dim = output_dim
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=width, kernel_size=patch_size, stride=patch_size, bias=False)
@@ -331,7 +351,8 @@ class VisionTransformer(nn.Module):
             act_layer=act_layer,
             norm_layer=norm_layer,
             mmadapter=mmadapter,
-            mmadapter_aux=mmadapter_aux
+            mmadapter_aux=mmadapter_aux,
+            align_before=align_before,
         )
 
         self.ln_post = norm_layer(width)
@@ -384,15 +405,26 @@ class VisionTransformer(nn.Module):
         x = self.ln_pre(x)
 
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x)
+        if self.align_before:
+            x,intermediates_vis = self.transformer(x)
+        else:
+            x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
+        if self.align_before:
+            for i in range(len(intermediates_vis)):
+                intermediates_vis[i] = intermediates_vis[i].permute(1, 0, 2)[:, 0, :]
 
         x = self.ln_post(x[:, 0, :])
 
         if self.proj is not None:
             x = x @ self.proj
-
+            if self.align_before:
+                intermediates_vis = [intermediate @ self.proj for intermediate in intermediates_vis]  
+                return x,intermediates_vis
+            
         return x
+
+        
 
 
 class TextTransformer(nn.Module):
@@ -411,12 +443,14 @@ class TextTransformer(nn.Module):
             mmadapter:nn.ModuleList = None,
             mmadapter_aux:nn.ModuleList = None,
             modalemb:nn.Module = None,
+            align_before:bool = False,
     ):
         super().__init__()
         self.context_length = context_length
         self.vocab_size = vocab_size
         self.width = width
         self.output_dim = output_dim
+        self.align_before = align_before
 
         self.token_embedding = nn.Embedding(vocab_size, width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, width))
@@ -482,12 +516,20 @@ class TextTransformer(nn.Module):
 #         x=x+embedding_text
         
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x, attn_mask=self.attn_mask)
+        if self.align_before:
+            x,intermediates_text = self.transformer(x, attn_mask=self.attn_mask)
+        else:
+            x = self.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)
 
         # x.shape = [batch_size, n_ctx, transformer.width]
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-
+        if self.align_before:
+            intermediates_text = [intermediate[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection for intermediate in intermediates_text]
+            return x,intermediates_text
+        
         return x
+
+        
