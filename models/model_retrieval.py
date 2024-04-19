@@ -32,6 +32,7 @@ class HarMA(HarMABase):
         self.use_affil_loss = config['use_affil_loss']
         self.use_triplet_loss = config['use_triplet_loss']
         self.model = model
+        self.align_before = False
 
     # def load_pretrained(self, ckpt_rpath, config, is_eval=False):
     #     state_dict = load_pretrained_HarMA(ckpt_rpath, config, is_eval=is_eval, load_text=True)
@@ -41,21 +42,32 @@ class HarMA(HarMABase):
     #     print("unexpected_keys: ", msg.unexpected_keys)
     def get_vis_emb(self, image, idx=None, label=None):
         if self.config['is_baseline']:
-            img_emb = self.model.encode_image(image,normalize=True)
+            if self.align_before:
+                img_emb,feas_vis = self.model.encode_image(image,normalize=True)
+                return img_emb,feas_vis
+            else:
+                img_emb = self.model.encode_image(image,normalize=True)
             return img_emb
         
     def get_txt_emb(self, text_ids, idx=None, label=None):
         if self.config['is_baseline']:
-            txt_emb = self.model.encode_text(text_ids,normalize=True)
+            if self.align_before:
+                txt_emb,feas_txt = self.model.encode_text(text_ids,normalize=True)
+                return txt_emb,feas_txt
+            else:
+                txt_emb = self.model.encode_text(text_ids,normalize=True)
             return txt_emb
         
 
     def forward(self, image, text_ids, idx=None, label=None):
         ## Baseline(Swin-T+Bert-B)
         if self.config['is_baseline']:
-            
-            img_emb = self.get_vis_emb(image)
-            txt_emb=self.get_txt_emb(text_ids)
+            if self.align_before:
+                img_emb,feas_vis = self.get_vis_emb(image)
+                txt_emb,feas_txt = self.get_txt_emb(text_ids)
+            else:
+                img_emb = self.get_vis_emb(image)
+                txt_emb=self.get_txt_emb(text_ids)
             # txt_emb = self.get_text_embeds(text_ids)
         else:
             img_emb= self.get_vision_fusion_embeds(image, self.config)
@@ -69,6 +81,16 @@ class HarMA(HarMABase):
             loss_triplet = self.get_triplet_loss(img_emb, txt_emb)
             return loss_triplet
         else:
+            loss_before_contr = []
+            if self.align_before:
+                for i in range(len(feas_vis)):
+                    # print("vis",feas_vis[i].shape)
+                    loss_contr = self.get_contr_loss(feas_vis[i],feas_txt[i], idx=idx, label=label, config=self.config)
+                    loss_before_contr.append(loss_contr)
+                total_loss_before = sum(loss_before_contr)
+            loss_triplet = self.weighted_triplet_loss(img_emb, txt_emb)
+            if self.align_before:
+                return loss_contr,loss_triplet,total_loss_before
             loss_contr = self.get_contr_loss(img_emb, txt_emb, idx=idx, label=label, config=self.config)
             loss_triplet = self.weighted_triplet_loss(img_emb, txt_emb)
             #TODO new loss

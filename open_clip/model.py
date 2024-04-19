@@ -266,7 +266,7 @@ class CLIP(nn.Module):
         #     for layer_id in range(12)
         # ])
         
-        self.modalemb = nn.Embedding(2, 768)# 
+        # self.modalemb = nn.Embedding(2, 768)# 
         
         self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype,MMadapter_img=MMadapter_img,MMadapter_aux=None,modalemb=self.modalemb)
 
@@ -280,6 +280,7 @@ class CLIP(nn.Module):
         self.register_buffer('attn_mask', text.attn_mask, persistent=False)
 
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.align_before = False
 
     def lock_image_tower(self, unlocked_groups=0, freeze_bn_stats=False):
         # lock image tower as per LiT - https://arxiv.org/abs/2111.07991
@@ -291,8 +292,16 @@ class CLIP(nn.Module):
         self.transformer.grad_checkpointing = enable
 
     def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
-        return F.normalize(features, dim=-1) if normalize else features
+        if self.align_before:
+            features,vis_fea = self.visual(image)
+        else:
+            features = self.visual(image)
+        if normalize:
+            features = F.normalize(features, dim=-1)
+            if self.align_before:
+                vis_fea = [F.normalize(fea, dim=-1) for fea in vis_fea] 
+                return features, vis_fea
+        return features
 
     def encode_text(self, text, normalize: bool = False):
         cast_dtype = self.transformer.get_cast_dtype()
@@ -301,12 +310,24 @@ class CLIP(nn.Module):
 
         x = x + self.positional_embedding.to(cast_dtype)
         x = x.permute(1, 0, 2)  # NLD -> LND
-        x = self.transformer(x, attn_mask=self.attn_mask)
+        if self.align_before:
+            x,intermediates_text = self.transformer(x, attn_mask=self.attn_mask)
+        else:
+            x = self.transformer(x, attn_mask=self.attn_mask)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x)  # [batch_size, n_ctx, transformer.width]
+        if self.align_before:
+            for i in range(len(intermediates_text)):
+                intermediates_text[i] = intermediates_text[i][torch.arange(intermediates_text[i].shape[0]), text.argmax(dim=-1)] @ self.text_projection
         # take features from the eot embedding (eot_token is the highest number in each sequence)
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
-        return F.normalize(x, dim=-1) if normalize else x
+        if normalize:
+            x = F.normalize(x, dim=-1)
+            if self.align_before:
+                for i in range(len(intermediates_text)):
+                    intermediates_text[i] = F.normalize(intermediates_text[i], dim=-1)
+                return x, intermediates_text
+        return x
 
     def forward(self, image, text):
         image_features = self.encode_image(image, normalize=True)
