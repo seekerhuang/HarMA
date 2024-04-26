@@ -224,42 +224,8 @@ class HarMABase(nn.Module):
                  use_contrastive_loss=False, use_affil_loss=False):
         super().__init__()
         if config['is_baseline']:
-            pass
-            # self.vision_encoder, vision_width = build_vision_encoder(config, load_vision_params=load_vision_params)
-            # self.text_encoder, text_width = build_text_encoder(config, load_text_params=load_text_params)
-            # self.vision_width = vision_width
-            # self.text_width = text_width
             self.embed_dim = config['embed_dim']
-            # self.max_tokens = config['max_tokens']
-            # if config['use_triplet_loss'] == False:
             self.temp = nn.Parameter(torch.ones([]) * config['temp1'])
-            # if config['use_affil_loss']:
-            #     self.temp2 = nn.Parameter(torch.ones([]) * config['temp2']) # without AFLoss
-            # self.vision_proj = nn.Linear(self.vision_width, self.embed_dim)
-            # self.text_proj = nn.Linear(self.text_width, self.embed_dim)
-        else:
-            self.vision_encoder, vision_width = build_vision_encoder(config, load_vision_params=load_vision_params)
-            self.text_encoder, text_width = build_text_encoder(config, load_text_params=load_text_params)
-            self.conv_encoder, conv_width = build_conv_encoder(config, load_vision_params=load_vision_params) # without VIR
-            self.vision_width = vision_width
-            self.text_width = text_width
-            self.conv_width = conv_width # without VIR
-            self.embed_dim = config['embed_dim']
-            self.max_tokens = config['max_tokens']
-            self.temp = nn.Parameter(torch.ones([]) * config['temp1'])
-            if config['use_affil_loss']:
-                self.temp2 = nn.Parameter(torch.ones([]) * config['temp2']) # without AFLoss
-            self.vision_proj = nn.Linear(self.vision_width, self.embed_dim)
-            self.text_proj = nn.Linear(self.text_width, self.embed_dim)
-            self.conv_proj = nn.Linear(self.conv_width, self.embed_dim)  # without VIR
-            self.mapping_img = clones(nn.Linear(self.embed_dim, self.embed_dim), config['instru_num']) # without VIR
-            self.mapping_txt = clones(nn.Linear(self.embed_dim, self.embed_dim), config['cycle_num']) # without LCA
-            self.head_img = nn.Linear(self.embed_dim, self.embed_dim) # without VIR
-            self.head_txt = nn.Linear(self.embed_dim, self.embed_dim) # without LCA
-            self.img_sa = clones(build_self_attention(config, model='image'), config['instru_num']) # without VIR
-            self.img_ca = clones(build_self_attention(config, model='cross'), config['instru_num']) # without VIR
-            self.txt_sa = clones(build_self_attention(config, model='text'), config['cycle_num'])# without LCA
-            self.txt_ca = clones(build_self_attention(config, model='cross'),config['cycle_num'])# without LCA
 
     def load_pretrained_harma(self, ckpt_rpath, config, is_eval=False):
         state_dict = load_pretrained_harma(ckpt_rpath, config, is_eval=is_eval, load_text=True)
@@ -279,69 +245,6 @@ class HarMABase(nn.Module):
         text_embeds: cls + sequence embeds
         """
         return F.normalize(self.text_proj(self.text_encoder(text_ids))[:, 0, :])
-
-    def get_vision_fusion_embeds(self, image, config):
-        """
-        Vision Instruction Representation-VLR
-        """
-        filter_size = config['filter_size']
-        swin_feat = self.vision_proj(self.vision_encoder(image))
-        # ResNet and VGG
-        conv_feat = self.conv_proj(self.conv_encoder(image).squeeze()).unsqueeze(dim=1)
-        # ## Swin and ViT
-        # conv_feat = self.conv_proj(self.conv_encoder(image)[:, 0, :].squeeze()).unsqueeze(dim=1)
-
-        image_g_emb = swin_feat[:, 0, :]
-        swin_feat_loc = swin_feat[:, 0:50,:]
-
-        # Rank & Filter
-        score_feat = F.softmax(torch.matmul(swin_feat_loc, conv_feat.transpose(-2, -1)).squeeze(), dim=-1)
-        sorted_fscore, sorted_ind = torch.sort(score_feat, dim=1, descending=True)
-        swin_feat_fi_ = []
-        for i in range(swin_feat_loc.shape[0]):
-            swin_feat_fi_.append(torch.index_select(swin_feat_loc[i,:,:], 0, sorted_ind[i]).unsqueeze(dim=0))
-        swin_feat_fi = torch.cat(swin_feat_fi_, dim=0)[:, :filter_size, :]
-        conv_feats = conv_feat.expand(swin_feat_fi.shape)
-        # print('conv_feats{}'.format(conv_feats.shape))
-        for i in range(config['instru_num']):
-            swin_att = self.img_sa[i](swin_feat_fi)
-            # swin_inst = self.img_ca[i](swin_att, self.mapping_img[i](conv_feat))
-            swin_inst = self.img_ca[i](self.mapping_img[i](conv_feats), swin_att)
-            # print('swin_inst: {}'.format(swin_inst.shape))
-            swin_feat_fi = swin_inst
-
-        img_l_adj = swin_inst[:, 0, :]
-        return F.normalize(image_g_emb + self.head_img(img_l_adj))
-
-    def get_text_fusion_embeds(self, text_ids, config):
-        """
-        Language Cycle Attention--LCA
-        """
-        text_feat = self.text_proj(self.text_encoder(text_ids))
-        # mask_text_feat = self.text_proj(self.text_encoder(mask_text_ids))
-        nu_text = text_feat.shape[1]
-        text_g_emb = text_feat[:, 0, :]
-        text_l_embs = text_feat[:, 0:nu_text, :]
-
-        for i in range(config['cycle_num']):
-            text_att = self.txt_sa[i](text_l_embs)
-            # text_cros = self.txt_ca[i](text_att, self.mapping_txt[i](text_l_embs))
-            text_cros = self.txt_ca[i](self.mapping_txt[i](text_l_embs), text_att)
-            text_l_embs = text_cros
-        text_l_adj = text_l_embs[:, 0, :]
-        return F.normalize(text_g_emb + self.head_txt(text_l_adj))
-
-        ### SA experiment
-        text_feat = self.text_proj(self.text_encoder(text_ids))
-        nu_text = text_feat.shape[1]
-        text_g_emb = text_feat[:, 0, :]
-        text_l_embs = text_feat[:, 0:nu_text, :]
-        for i in range(config['cycle_num']):
-            text_att = self.txt_sa[i](text_l_embs)
-            text_l_embs = text_att
-
-        text_l_adj = text_l_embs[:, 0, :]
-        return F.normalize(self.head_txt(text_l_adj))
 
 
     def get_contr_loss(self, image_feat, text_feat, idx=None, label=None, config=None):
