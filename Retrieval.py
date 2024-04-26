@@ -114,7 +114,6 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
         else:
             metric_logger.update(loss_contr=loss_contr.item())
             metric_logger.update(loss_triplet=loss_triplet.item())
-            # metric_logger.update(loss_mmd=loss_mmd.item())
             
 
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -184,10 +183,6 @@ def evaluation(model, data_loader, tokenizer, device, config):
 
         text_embeds.append(text_embed)
 
-    image_embeds = torch.cat(image_embeds, dim=0)
-    text_embeds = torch.cat(text_embeds, dim=0)
-    np.save(os.path.join('/root/autodl-tmp/HARMA-main/fea', 'image_embeds.npy'), image_embeds.cpu().numpy())
-    np.save(os.path.join('/root/autodl-tmp/HARMA-main/fea', 'text_embeds.npy'), text_embeds.cpu().numpy())
 
 
     # calculate similarity matrix
