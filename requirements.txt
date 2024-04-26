@@ -3,8 +3,6 @@ adapter-transformers==3.2.1.post0
 addict==2.4.0
 aiofiles==22.1.0
 aiosqlite==0.18.0
-aliyun-python-sdk-core==2.13.36
-aliyun-python-sdk-kms==2.16.2
 annotated-types==0.6.0
 anyio==3.6.2
 argon2-cffi==21.3.0
