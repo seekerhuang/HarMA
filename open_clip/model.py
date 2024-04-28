@@ -107,7 +107,7 @@ def _build_vision_tower(
             norm_layer=norm_layer,
             mmadapter=MMadapter_img,
             mmadapter_aux=MMadapter_aux,
-            modalemb=modalemb
+            modalemb=None
         )
 
     return visual
@@ -140,7 +140,7 @@ def _build_text_tower(
         norm_layer=norm_layer,
         mmadapter=MMadapter_text,
         mmadapter_aux=MMadapter_aux,
-        modalemb=modalemb
+        modalemb=None
     )
 
     return text
@@ -268,9 +268,9 @@ class CLIP(nn.Module):
         
         # self.modalemb = nn.Embedding(2, 768)# 
         
-        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype,MMadapter_img=MMadapter_img,MMadapter_aux=None,modalemb=self.modalemb)
+        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype,MMadapter_img=MMadapter_img,MMadapter_aux=None,modalemb=None)
 
-        text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype,MMadapter_text=MMadapter_text,MMadapter_aux=None,modalemb=self.modalemb)
+        text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype,MMadapter_text=MMadapter_text,MMadapter_aux=None,modalemb=None)
         self.transformer = text.transformer
         self.vocab_size = text.vocab_size
         self.token_embedding = text.token_embedding
