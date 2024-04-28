@@ -3,7 +3,7 @@ dataset:
   train_file: ['data/finetune/rsicd_train.json']  # Training data file
   val_file: 'data/finetune/rsicd_val.json'        # Validation data file
   test_file: 'data/finetune/rsicd_test.json'      # Testing data file
-  image_root: '/root/autodl-tmp/rsicd/'           # Root directory for images
+  image_root: '../PIR/rsicd/'           # Root directory for images
 
 # Vision encoder configuration
 vision_encoder:

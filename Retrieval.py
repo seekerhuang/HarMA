@@ -260,13 +260,12 @@ def main(args, config):
         config['batch_size_train'] = args.bs // world_size
 
     seed = args.seed + utils.get_rank()
+
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    #seed everything
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    cudnn.benchmark = True
 
     print("Creating model", flush=True)
 
@@ -277,7 +276,7 @@ def main(args, config):
     # load pre-trianed model
     # do not load the pre-trained model
     if args.checkpoint != '-1':
-        ckpt_rpath = "/root/autodl-tmp/HARMA-main/checkpoints/HARMA/full_rsitmd/checkpoint_48.pth"
+        ckpt_rpath = args.checkpoint
         checkpoint = torch.load(ckpt_rpath, map_location='cpu')
         state_dict = checkpoint['model'] if 'model' in checkpoint.keys() else checkpoint
         # new_state_dict = {"model." + k: v for k, v in state_dict.items()}
@@ -288,7 +287,6 @@ def main(args, config):
         print("unexp", msg.unexpected_keys)
         pass
     model = model.to(device)
-    print("### Total Params: ", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     model_without_ddp = model
     if args.distributed:
@@ -420,7 +418,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, required=True)
     parser.add_argument('--output_dir', type=str, required=True)  # this script works for both mscoco and flickr30k
     parser.add_argument('--device', default='cuda')
-    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--seed', default=3407, type=int)
     parser.add_argument('--world_size', default=2, type=int, help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action='store_false')
