@@ -168,19 +168,6 @@ def build_mlp(input_dim, output_dim):
         nn.Linear(input_dim * 2, output_dim))
 
 
-def build_self_attention(config, model='image'):
-    embed_dim = config['embed_dim']
-    dropout_r = config['dropout_r']
-    head = config['head']
-    if model == 'cross':
-        return CroSA(embed_dim, dropout_r, head)
-    elif model == 'image':
-        return MHSA(embed_dim, dropout_r, head)
-    elif model == 'text':
-        return MHSA(embed_dim, dropout_r, head)
-    else:
-        raise ValueError
-
 def clones(module, N):
     """Produce N identical layers.
     """
