@@ -75,14 +75,22 @@ def run_retrieval(args):
 
 
 def run(args):
-    if args.task == 'itr_rsicd':
+    if args.task == 'itr_rsicd_vit':
         # assert os.path.exists("../X-VLM-pytorch/images/rsicd")
-        args.config = 'configs/Retrieval_rsicd.yaml'
+        args.config = 'configs/Retrieval_rsicd_vit.yaml'
         run_retrieval(args)
 
-    elif args.task == 'itr_rsitmd':
+    elif args.task == 'itr_rsitmd_vit':
         # assert os.path.exists("../X-VLM-pytorch/images/rsitmd")
-        args.config = 'configs/Retrieval_rsitmd.yaml'
+        args.config = 'configs/Retrieval_rsitmd_vit.yaml'
+        run_retrieval(args)
+    elif args.task == 'itr_rsitmd_geo':
+        # assert os.path.exists("../X-VLM-pytorch/images/rsitmd")
+        args.config = 'configs/Retrieval_rsitmd_geo.yaml'
+        run_retrieval(args)
+    elif args.task == 'itr_rsicd_geo':
+        # assert os.path.exists("../X-VLM-pytorch/images/rsicd")
+        args.config = 'configs/Retrieval_rsicd_geo.yaml'
         run_retrieval(args)
 
     elif args.task == 'itr_coco':
@@ -102,7 +110,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--task', type=str, default='itr_rsitmd')
     parser.add_argument('--dist', type=str, default='f2', help="see func get_dist_launch for details")
-    parser.add_argument('--config', default='configs/Retrieval_rsitmd.yaml', type=str, help="if not given, use default")
+    parser.add_argument('--config', default='configs/Retrieval_rsitmd_vit.yaml', type=str, help="if not given, use default")
     parser.add_argument('--bs', default=-1, type=int, help="for each gpu, batch_size = bs // num_gpus; "
                                                   "this option only works for fine-tuning scripts.")
     parser.add_argument('--seed', default=42, type=int)

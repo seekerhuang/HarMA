@@ -8,20 +8,12 @@ from PIL import Image
 import open_clip
 # from inference_tool import get_preprocess
 from open_clip import tokenizer
-# from inference_tool import (zeroshot_evaluation,
-#                             retrieval_evaluation,
-#                             semantic_localization_evaluation,
-#                             get_preprocess
-#                             )
 
-ckpt_path = "/root/autodl-tmp/GeoRSCLIP/ckpt/RS5M_ViT-B-32_RET-2.pt"  
-model, _, _ = open_clip.create_model_and_transforms("ViT-B/32",pretrained="laion2b_s34b_b79k")
-checkpoint = torch.load(ckpt_path, map_location="cpu")
-msg = model.load_state_dict(checkpoint, strict=False)
+clip, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
+# checkpoint = torch.load(ckpt_path, map_location="cpu")
+# msg = clip.load_state_dict(checkpoint, strict=False)
 # print("Missing keys: ", msg.missing_keys)
 # print("Unexpected keys: ", msg.unexpected_keys)
-
-
 
 
 class HarMA(HarMABase):
@@ -31,31 +23,32 @@ class HarMA(HarMABase):
         self.config = config
         self.use_affil_loss = config['use_affil_loss']
         self.use_triplet_loss = config['use_triplet_loss']
-        self.model = model
+        self.clip = clip
+        self.load_pretrained(config)
         self.align_before = False
 
-    # def load_pretrained(self, ckpt_rpath, config, is_eval=False):
-    #     state_dict = load_pretrained_HarMA(ckpt_rpath, config, is_eval=is_eval, load_text=True)
-    #     msg = self.load_state_dict(state_dict, strict=False)
-    #     print('load checkpoint from %s' % ckpt_rpath)
-    #     print("missing_keys: ", [p for p in msg.missing_keys if 'vision_encoder' not in p])
-    #     print("unexpected_keys: ", msg.unexpected_keys)
+    def load_pretrained(self, config):
+        if self.config['model'] == 'geo': 
+            ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
+        checkpoint = torch.load(ckpt_path, map_location='cpu')
+        msg = self.clip.load_state_dict(checkpoint, strict=False)
+
     def get_vis_emb(self, image, idx=None, label=None):
         if self.config['is_baseline']:
             if self.align_before:
-                img_emb,feas_vis = self.model.encode_image(image,normalize=True)
+                img_emb,feas_vis = self.clip.encode_image(image,normalize=True)
                 return img_emb,feas_vis
             else:
-                img_emb = self.model.encode_image(image,normalize=True)
+                img_emb = self.clip.encode_image(image,normalize=True)
             return img_emb
         
     def get_txt_emb(self, text_ids, idx=None, label=None):
         if self.config['is_baseline']:
             if self.align_before:
-                txt_emb,feas_txt = self.model.encode_text(text_ids,normalize=True)
+                txt_emb,feas_txt = self.clip.encode_text(text_ids,normalize=True)
                 return txt_emb,feas_txt
             else:
-                txt_emb = self.model.encode_text(text_ids,normalize=True)
+                txt_emb = self.clip.encode_text(text_ids,normalize=True)
             return txt_emb
         
 

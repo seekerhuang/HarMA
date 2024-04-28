@@ -92,7 +92,7 @@ def load_checkpoint(model, checkpoint_path, strict=True):
 
 def create_model(
         model_name: str,
-        pretrained: Optional[str] = None,
+        pretrained: Optional[str] = 'laion2b_s34b_b79k',
         precision: str = 'fp32',
         device: Union[str, torch.device] = 'cpu',
         jit: bool = False,

@@ -32,6 +32,7 @@ training:
     temp2: 0.07                            # Temperature parameter 2
   k_test: 512                              # K parameter for testing
   is_baseline: True                        # Whether this is a baseline model
+  model: 'vit'
 
 # Optimization and Scheduling Configuration
 optimization:

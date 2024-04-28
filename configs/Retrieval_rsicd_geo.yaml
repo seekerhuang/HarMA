@@ -1,0 +1,70 @@
+# Configuration for the training, validation, and testing datasets
+dataset:
+  train_file: ['data/finetune/rsicd_train.json']  # Training data file
+  val_file: 'data/finetune/rsicd_val.json'        # Validation data file
+  test_file: 'data/finetune/rsicd_test.json'      # Testing data file
+  image_root: '/root/autodl-tmp/rsicd/'           # Root directory for images
+
+# Vision encoder configuration
+vision_encoder:
+  config: 'configs/config_swinT_224.json'   # Path to vision encoder config file
+  checkpoint: 'data/aid_28-rsp-resnet-50-ckpt.pth'  # Pretrained weights
+  finetune_conv: False                     # Flag to finetune convolutional layers
+  use_swin: True                           # Flag to use Swin Transformer
+  image_resolution: 224                    # Image resolution used
+  patch_size: 32                           # Patch size for Swin Transformer
+
+# Text encoder configuration
+text_encoder:
+  config: 'configs/config_bert.json'       # Path to text encoder config file
+  encoder: 'data/bert-base-uncased'        # Pretrained BERT encoder
+
+# Training hyperparameters
+training:
+  batch_size:
+    train: 214                             # Batch size for training
+    test: 128                              # Batch size for testing
+    test_text: 128                         # Batch size for testing text
+  max_tokens: 47                           # Maximum number of tokens
+  embed_dim: 512                           # Embedding dimension
+  temperatures:
+    temp1: 0.07                            # Temperature parameter 1
+    temp2: 0.07                            # Temperature parameter 2
+  k_test: 512                              # k parameter for testing
+  is_baseline: True                        # Flag to indicate if this is a baseline model
+  model: 'geo'
+
+# Other settings related to optimization and scheduling
+optimization:
+  optimizer:
+    type: adamW                            # Optimizer type
+    lr: 4e-5                               # Learning rate
+    weight_decay: 0.04                     # Weight decay rate
+    lr_mult: 2                             # Learning rate multiplier
+  scheduler:
+    type: linear                           # Scheduler type
+    lr: 4e-5                               # Scheduler learning rate
+    epochs: 60                             # Total number of epochs
+    num_warmup_steps: 0.1                  # Number of warm-up steps
+
+# Model-specific settings
+model:
+  # Representation Alignment (RA) settings
+  representation_alignment:
+    use_affil_loss: False                  # Flag to use affiliation loss
+    use_triplet_loss: False                # Flag to use triplet loss
+    center_factor: 1                       # Center factor for affiliation loss
+
+  # Vision Instruction Representation (VIR) settings
+  vision_instruction_representation:
+    filter_size: 40                        # Filter size
+    instru_num: 2                          # Number of instructions
+
+  # Language Cycle Attention (LCA) settings
+  language_cycle_attention:
+    cycle_num: 3                           # Number of cycle attention iterations
+
+  # Self-Attention (SA) and Cross-Attention (CA) parameters
+  attention_parameters:
+    dropout_rate: 0.2                      # Dropout rate
+    num_heads: 8                           # Number of attention heads
