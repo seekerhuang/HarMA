@@ -22,7 +22,7 @@ text_encoder:
 # Training Configuration
 training:
   batch_size:
-    train: 1024                             # Batch size for training
+    train: 214                             # Batch size for training
     test: 128                              # Batch size for testing
     test_text: 128                         # Batch size for testing text data
   max_tokens: 47                           # Maximum number of tokens per example
@@ -37,13 +37,13 @@ training:
 optimization:
   optimizer:
     type: adamW                            # Optimizer type
-    lr: 8e-5                               # Learning rate
+    lr: 4e-4                               # Learning rate
     weight_decay: 0.04                 # Weight decay rate
     lr_mult: 2                             # Learning rate multiplier
   scheduler:
     type: linear                           # Scheduler type
-    lr: 8e-5                               # Scheduler learning rate
-    epochs: 70                             # Total number of epochs
+    lr: 4e-4                               # Scheduler learning rate
+    epochs: 50                             # Total number of epochs
     num_warmup_steps: 0.1                  # Number of warm-up steps
 
 # Model-Specific Configuration
