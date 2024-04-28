@@ -15,7 +15,7 @@ from open_clip import tokenizer
 #                             )
 
 ckpt_path = "/root/autodl-tmp/GeoRSCLIP/ckpt/RS5M_ViT-B-32_RET-2.pt"  
-model, _, _ = open_clip.create_model_and_transforms("ViT-B/32",pretrained="openai")# openai for Georsclip or laion2b_s34b_b79k for ViT-B/32
+model, _, _ = open_clip.create_model_and_transforms("ViT-B/32",pretrained="laion2b_s34b_b79k")
 checkpoint = torch.load(ckpt_path, map_location="cpu")
 msg = model.load_state_dict(checkpoint, strict=False)
 # print("Missing keys: ", msg.missing_keys)
