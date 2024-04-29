@@ -52,7 +52,6 @@ def check_grad(model):
             print(f'No gradient for {name}, skipping...')
 
 def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, config):
-    # print(f'The model has {count_trainable_parameters(model)} trainable parameters.')
     
     
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -77,7 +76,6 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
         idx = idx.to(device, non_blocking=True)
         ## fix length of token
         text_input = tokenizer.tokenize(text).to(device)
-        # mask_text_input = tokenizer(mask_text, padding='longest', max_length=config['max_tokens'], return_tensors="pt").to(device)
         ## choose the loss
         if config['use_affil_loss']:
             loss_contr, loss_affil = model(image, text_input.input_ids, idx=idx, label=label)
@@ -96,7 +94,6 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
 
         optimizer.zero_grad()
         loss.backward()
-        # check_grad(model)
         optimizer.step()
         scheduler.step()
 
@@ -139,22 +136,7 @@ def evaluation(model, data_loader, tokenizer, device, config):
     image_embeds = []
     all_ = []
     print('_________________{}__________________'.format(len(data_loader)))
-#     for (image, img_id), text in zip(data_loader, texts):
-#         image = image.to(device)
-#         text_input = tokenizer.tokenize(text).to(device)
 
-#         if config['is_baseline']:
-#             image_embed,text_embed = model.get_fusion_emb(image,text_input)
-            
-#         else:
-#             t1 = time.time()
-#             image_embed = model.get_vision_fusion_embeds(image, config)
-#             t2 = time.time()
-#             all_.append(t2 - t1)
-#             text_embed = model.get_text_fusion_embeds(text_input.input_ids, config)
-            
-#         image_embeds.append(image_embed)
-#         text_embeds.append(text_embed)
     # Inference img features
     for image, img_id in data_loader:
         image = image.to(device)
