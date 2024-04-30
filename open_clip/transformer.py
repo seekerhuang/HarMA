@@ -111,22 +111,6 @@ class Attention(nn.Module):
         return x
 
 
-#here
-class BiDirectionalCrossAttention(nn.Module):
-    def __init__(self, hidden_dim, num_heads):
-        super(BiDirectionalCrossAttention, self).__init__()
-        self.hidden_dim = hidden_dim
-        self.num_heads = num_heads
-        self.mha = nn.MultiheadAttention(hidden_dim, num_heads)
-
-    def forward(self, text_emb, image_emb):
-        # text query image
-        text_query_image = self.mha(text_emb, image_emb, image_emb)[0]
-        # img query text
-        image_query_text = self.mha(image_emb, text_emb, text_emb)[0]
-
-        return text_query_image, image_query_text
-
 
 # class mmadapter(nn.Module):
 #     def __init__(self, img_size,text_size):
