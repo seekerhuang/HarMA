@@ -8,7 +8,7 @@ More detailed explanations will be coming soon...
 
 ## Citation
 
-```tex
+```bibtex
 @misc{huang2024efficient,
       title={Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment}, 
       author={Tengjun Huang},
