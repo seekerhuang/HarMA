@@ -34,7 +34,7 @@ class HarMA(HarMABase):
         msg = self.clip.load_state_dict(checkpoint, strict=False)
 
     def get_vis_emb(self, image, idx=None, label=None):
-        if self.config['is_baseline']:
+        if self.config['is_harma']:
             if self.align_before:
                 img_emb,feas_vis = self.clip.encode_image(image,normalize=True)
                 return img_emb,feas_vis
@@ -43,7 +43,7 @@ class HarMA(HarMABase):
             return img_emb
         
     def get_txt_emb(self, text_ids, idx=None, label=None):
-        if self.config['is_baseline']:
+        if self.config['is_harma']:
             if self.align_before:
                 txt_emb,feas_txt = self.clip.encode_text(text_ids,normalize=True)
                 return txt_emb,feas_txt
@@ -54,7 +54,7 @@ class HarMA(HarMABase):
 
     def forward(self, image, text_ids, idx=None, label=None):
         ## Baseline(Swin-T+Bert-B)
-        if self.config['is_baseline']:
+        if self.config['is_harma']:
             if self.align_before:
                 img_emb,feas_vis = self.get_vis_emb(image)
                 txt_emb,feas_txt = self.get_txt_emb(text_ids)

@@ -1,70 +1,54 @@
-# Configuration for the training, validation, and testing datasets
-dataset:
-  train_file: ['data/finetune/rsicd_train.json']  # Training data file
-  val_file: 'data/finetune/rsicd_val.json'        # Validation data file
-  test_file: 'data/finetune/rsicd_test.json'      # Testing data file
-  image_root: '../PIR/rsicd/'           # Root directory for images
+############## The train & val & test set root ##############
+train_file: ['data/finetune/rsicd_train.json']  # Training data file
+val_file: 'data/finetune/rsicd_val.json'     # Validation data file
+test_file: 'data/finetune/rsicd_test.json'    # Testing data file
+image_root: '../PIR/rsicd/'      # Root directory for images
 
-# Vision encoder configuration
-vision_encoder:
-  config: 'configs/config_swinT_224.json'   # Path to vision encoder config file
-  checkpoint: 'data/aid_28-rsp-resnet-50-ckpt.pth'  # Pretrained weights
-  finetune_conv: False                     # Flag to finetune convolutional layers
-  use_swin: True                           # Flag to use Swin Transformer
-  image_resolution: 224                    # Image resolution used
-  patch_size: 32                           # Patch size for Swin Transformer
+############## Vision encoder setting ##############
+vision_config: 'configs/config_swinT_224.json'  # configs/config_swinT_224.json 'configs/config_swinB_224.json'
 
-# Text encoder configuration
-text_encoder:
-  config: 'configs/config_bert.json'       # Path to text encoder config file
-  encoder: 'data/bert-base-uncased'        # Pretrained BERT encoder
+resnet_ckpt: 'data/aid_28-rsp-resnet-50-ckpt.pth' # 'data/aid_28-rsp-resnet-50-ckpt.pth' or 'INS/aid_resnet50.pth'
 
-# Training hyperparameters
-training:
-  batch_size:
-    train: 214                             # Batch size for training
-    test: 128                              # Batch size for testing
-    test_text: 128                         # Batch size for testing text
-  max_tokens: 47                           # Maximum number of tokens
-  embed_dim: 512                           # Embedding dimension
-  temperatures:
-    temp1: 0.07                            # Temperature parameter 1
-    temp2: 0.07                            # Temperature parameter 2
-  k_test: 512                              # k parameter for testing
-  is_baseline: True                        # Flag to indicate if this is a baseline model
-  model: 'vit'
+image_res: 224  # no need modify
+patch_size: 32   #if use swin, set the patch_size to 32, else 16
 
-# Other settings related to optimization and scheduling
-optimization:
-  optimizer:
-    type: adamW                            # Optimizer type
-    lr: 4e-4                               # Learning rate
-    weight_decay: 0.04                     # Weight decay rate
-    lr_mult: 2                             # Learning rate multiplier
-  scheduler:
-    type: linear                           # Scheduler type
-    lr: 4e-4                               # Scheduler learning rate
-    epochs: 50                             # Total number of epochs
-    num_warmup_steps: 0.1                  # Number of warm-up steps
+############## Text encoder setting ##############
+text_config: 'configs/config_bert.json'
+text_encoder: 'data/bert-base-uncased'
 
-# Model-specific settings
-model:
-  # Representation Alignment (RA) settings
-  representation_alignment:
-    use_affil_loss: False                  # Flag to use affiliation loss
-    use_triplet_loss: False                # Flag to use triplet loss
-    center_factor: 1                       # Center factor for affiliation loss
+################ Training setting ################
+#== no need revise in general
+batch_size_train: 214
+batch_size_test: 128
+batch_size_test_text: 128
 
-  # Vision Instruction Representation (VIR) settings
-  vision_instruction_representation:
-    filter_size: 40                        # Filter size
-    instru_num: 2                          # Number of instructions
+embed_dim: 512
+temp1: 0.07
+temp2: 0.07
+is_harma: True
+model: 'vit'  
+save_epoch: False
+save_num_epoch: 1
 
-  # Language Cycle Attention (LCA) settings
-  language_cycle_attention:
-    cycle_num: 3                           # Number of cycle attention iterations
+############## Other Settings ##############
+optimizer: {opt: adamW, lr: 0.0004, weight_decay: 0.04, lr_mult: 2}  
+schedular: {sched: linear, lr: 0.0004, epochs: 10, num_warmup_steps: 0.1} # need to set the epoches, if needed, also lr
 
-  # Self-Attention (SA) and Cross-Attention (CA) parameters
-  attention_parameters:
-    dropout_rate: 0.2                      # Dropout rate
-    num_heads: 8                           # Number of attention heads
+################ Model setting  #######################################################################################
+#== 1. Representation Alignment, RA                                                                                 ####
+use_affil_loss: False # use affil loss
+use_triplet_loss: False
+center_factor: 1 # if use affil loss, set the center factor                                                      ####
+# indistinct_margin: 0.01                                                                                           ####
+                                                                                                                    ####
+#== 2. Vision Instruction Representation, VIR                                                                       ####
+filter_size: 40 # modify the filter size of vision instruction representation                                       ####
+instru_num: 2 # 2                                                                                                       #=##
+#== 3. Language Cycle Attention,  LCA                                                                               ####
+cycle_num: 3 # 3 # how many times of cycle attention                                                                    ####
+                                                                                                                    ####
+#== 4. the SA & CA parameter (include VIR and LCA Module)                                                           ####
+dropout_r: 0.2                                                                                                      #=##
+head: 8                                                                                                             #=##
+########################################################################################################################
+

@@ -140,7 +140,7 @@ def evaluation(model, data_loader, tokenizer, device, config):
     # Inference img features
     for image, img_id in data_loader:
         image = image.to(device)
-        if config['is_baseline']:
+        if config['is_harma']:
             t1 = time.time()
             image_embed = model.get_vis_emb(image)
             t2 = time.time()
@@ -158,7 +158,7 @@ def evaluation(model, data_loader, tokenizer, device, config):
     for i in range(0, num_text, text_bs):
         text = texts[i: min(num_text, i + text_bs)]
         text_input = tokenizer.tokenize(text).to(device)
-        if config['is_baseline']:
+        if config['is_harma']:
             text_embed = model.get_txt_emb(text_input)
         else:
             text_embed = model.get_text_fusion_embeds(text_input.input_ids, config)
@@ -242,18 +242,19 @@ def main(args, config):
         config['batch_size_train'] = args.bs // world_size
 
     seed = args.seed + utils.get_rank()
-
+    # TODO seed everything but still not deterministic(± 1~1.5% difference in results), need to check
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    cudnn.benchmark = True
+    
 
     print("Creating model", flush=True)
 
     model = HarMA(config=config)
-    # set_trainable(model)
-    model.train()
+    set_trainable(model)
 
     # load pre-trianed model
     # do not load the pre-trained model
@@ -272,7 +273,7 @@ def main(args, config):
 
     model_without_ddp = model
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu],find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu],find_unused_parameters=False)
         model_without_ddp = model.module
 
 
@@ -340,15 +341,19 @@ def main(args, config):
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
             train_stats = train(model, train_loader, optimizer, tokenizer, epoch, device, lr_scheduler, config)
-
-            score_val_i2t, score_val_t2i, = evaluation(model_without_ddp, val_loader, tokenizer, device, config)
+            # print("begin val")
+            # score_val_i2t, score_val_t2i, = evaluation(model_without_ddp, val_loader, tokenizer, device, config)
+            score_test_i2t, score_test_t2i = evaluation(model_without_ddp, test_loader, tokenizer, device, config)
 
             if utils.is_main_process():
-                val_result = itm_eval(score_val_i2t, score_val_t2i, val_loader.dataset.txt2img, val_loader.dataset.img2txt)
-                print(val_result)
+                # val_result = itm_eval(score_val_i2t, score_val_t2i, val_loader.dataset.txt2img, val_loader.dataset.img2txt)
+                # print("val",val_result)
+                test_result = itm_eval(score_test_i2t, score_test_t2i, test_loader.dataset.txt2img, test_loader.dataset.img2txt)
+                print(test_result)
 
                 log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
-                             **{f'val_{k}': v for k, v in val_result.items()},
+                            #  **{f'val_{k}': v for k, v in val_result.items()},
+                             **{f'test_{k}': v for k, v in test_result.items()},
                              'epoch': epoch}
 
                 with open(os.path.join(args.output_dir, filename), "a") as f:
@@ -366,7 +371,7 @@ def main(args, config):
                     best = test_result['r_mean']
                     best_epoch = epoch
 
-                elif epoch >= config['schedular']['epochs'] - 1:
+                elif (epoch >= config['schedular']['epochs'] - 1) or ((config['save_epoch']==True) and (epoch % config['save_num_epoch']==0)):
                     save_obj = {
                         'model': model_without_ddp.state_dict(),
                         # 'optimizer': optimizer.state_dict(),

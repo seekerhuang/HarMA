@@ -210,7 +210,7 @@ class HarMABase(nn.Module):
     def __init__(self, config=None, load_vision_params=False, load_text_params=True,
                  use_contrastive_loss=False, use_affil_loss=False):
         super().__init__()
-        if config['is_baseline']:
+        if config['is_harma']:
             self.embed_dim = config['embed_dim']
             self.temp = nn.Parameter(torch.ones([]) * config['temp1'])
 
