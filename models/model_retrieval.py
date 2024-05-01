@@ -9,7 +9,7 @@ import open_clip
 # from inference_tool import get_preprocess
 from open_clip import tokenizer
 
-clip, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
+# clip, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
 # checkpoint = torch.load(ckpt_path, map_location="cpu")
 # msg = clip.load_state_dict(checkpoint, strict=False)
 # print("Missing keys: ", msg.missing_keys)
@@ -23,15 +23,17 @@ class HarMA(HarMABase):
         self.config = config
         self.use_affil_loss = config['use_affil_loss']
         self.use_triplet_loss = config['use_triplet_loss']
-        self.clip = clip
-        self.load_pretrained(config)
+        self.create_and_load_pretrained(config)
         self.align_before = False
 
-    def load_pretrained(self, config):
+    def create_and_load_pretrained(self, config):
         if self.config['model'] == 'geo': 
+            self.clip, _ ,_ = open_clip.create_model_and_transforms("ViT-B/32",pretrained='openai')
             ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
-        checkpoint = torch.load(ckpt_path, map_location='cpu')
-        msg = self.clip.load_state_dict(checkpoint, strict=False)
+            checkpoint = torch.load(ckpt_path, map_location='cpu')
+            msg = self.clip.load_state_dict(checkpoint, strict=False)
+        else:
+            self.clip, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
 
     def get_vis_emb(self, image, idx=None, label=None):
         if self.config['is_harma']:
