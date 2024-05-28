@@ -28,29 +28,29 @@ class HarMA(HarMABase):
 
     def create_and_load_pretrained(self, config):
         if self.config['model'] == 'geo': 
-            self.clip, _ ,_ = open_clip.create_model_and_transforms("ViT-B/32",pretrained='openai')
+            self.model, _ ,_ = open_clip.create_model_and_transforms("ViT-B/32",pretrained='openai')
             ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
             checkpoint = torch.load(ckpt_path, map_location='cpu')
-            msg = self.clip.load_state_dict(checkpoint, strict=False)
+            msg = self.model.load_state_dict(checkpoint, strict=False)
         else:
-            self.clip, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
+            self.model, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
 
     def get_vis_emb(self, image, idx=None, label=None):
         if self.config['is_harma']:
             if self.align_before:
-                img_emb,feas_vis = self.clip.encode_image(image,normalize=True)
+                img_emb,feas_vis = self.model.encode_image(image,normalize=True)
                 return img_emb,feas_vis
             else:
-                img_emb = self.clip.encode_image(image,normalize=True)
+                img_emb = self.model.encode_image(image,normalize=True)
             return img_emb
         
     def get_txt_emb(self, text_ids, idx=None, label=None):
         if self.config['is_harma']:
             if self.align_before:
-                txt_emb,feas_txt = self.clip.encode_text(text_ids,normalize=True)
+                txt_emb,feas_txt = self.model.encode_text(text_ids,normalize=True)
                 return txt_emb,feas_txt
             else:
-                txt_emb = self.clip.encode_text(text_ids,normalize=True)
+                txt_emb = self.model.encode_text(text_ids,normalize=True)
             return txt_emb
         
 
@@ -89,4 +89,4 @@ class HarMA(HarMABase):
             loss_contr = self.get_contr_loss(img_emb, txt_emb, idx=idx, label=label, config=self.config)
             loss_triplet = self.weighted_triplet_loss(img_emb, txt_emb)
             #TODO new loss
-            return loss_contr,loss_triplet,_
+            return loss_contr,loss_triplet,None

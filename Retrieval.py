@@ -168,6 +168,8 @@ def evaluation(model, data_loader, tokenizer, device, config):
 
 
     # calculate similarity matrix
+    image_embeds = torch.cat(image_embeds, dim=0)
+    text_embeds = torch.cat(text_embeds, dim=0)
     sims_matrix = image_embeds @ text_embeds.t()
 
     score_matrix_i2t = sims_matrix
@@ -341,13 +343,11 @@ def main(args, config):
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
             train_stats = train(model, train_loader, optimizer, tokenizer, epoch, device, lr_scheduler, config)
-            # print("begin val")
             # score_val_i2t, score_val_t2i, = evaluation(model_without_ddp, val_loader, tokenizer, device, config)
             score_test_i2t, score_test_t2i = evaluation(model_without_ddp, test_loader, tokenizer, device, config)
 
             if utils.is_main_process():
                 # val_result = itm_eval(score_val_i2t, score_val_t2i, val_loader.dataset.txt2img, val_loader.dataset.img2txt)
-                # print("val",val_result)
                 test_result = itm_eval(score_test_i2t, score_test_t2i, test_loader.dataset.txt2img, test_loader.dataset.img2txt)
                 print(test_result)
 
@@ -371,7 +371,7 @@ def main(args, config):
                     best = test_result['r_mean']
                     best_epoch = epoch
 
-                elif (epoch >= config['schedular']['epochs'] - 1) or ((config['save_epoch']==True) and (epoch % config['save_num_epoch']==0)):
+                elif (epoch >= config['schedular']['epochs'] - 1) and ((config['save_epoch']==True) and (epoch % config['save_num_epoch']==0)):
                     save_obj = {
                         'model': model_without_ddp.state_dict(),
                         # 'optimizer': optimizer.state_dict(),

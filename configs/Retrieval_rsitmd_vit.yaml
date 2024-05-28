@@ -28,7 +28,7 @@ temp2: 0.07
 is_harma: True
 model: 'vit'  
 save_epoch: True
-save_num_epoch: 1
+save_num_epoch: 10
 
 ############## Other Settings ##############
 optimizer: {opt: adamW, lr: 0.0004, weight_decay: 0.04, lr_mult: 2}  

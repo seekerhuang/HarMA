@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in scalar negative")
 
 
 ## aug functions
