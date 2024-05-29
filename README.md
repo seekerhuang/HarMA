@@ -86,7 +86,7 @@ Note: We provide a Jupyter notebook for direct execution. Please refer to the `b
 
 ## Citation
 
-If you find this paper or repository useful for your work, please cite it as follows:
+If you find this paper or repository useful for your work, please give it a star ⭐ and cite it as follows:
 
 ```bibtex
 @article{huang2024efficient,
