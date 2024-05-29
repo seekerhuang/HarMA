@@ -3,14 +3,14 @@
 This repo is the official implementation of "[Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](https://arxiv.org/abs/2404.18253)"(ICLRW 2024).
 
 - [Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](#a-harma)
-  - [Introduction](#-introduction)
-  - [Implementation](#-implementation)
-    - [Environments](#environments)
+  - [Introduction](#-Introduction)
+  - [Implementation](#-Implementation)
+    - [Environment Setup](#Environment Setup)
     - [Datasets](#datasets)
-    - [Train](#train)
-    - [Test](#test)
-  - [Acknowledgement](#-acknowledgement)
-  - [Citation](#-citation)
+    - [Training](#Training)
+    - [Testing](#Testing)
+  - [Acknowledgement](#-Acknowledgement)
+  - [Citation](#-Citation)
 
 ## Introduction
 
