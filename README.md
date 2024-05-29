@@ -46,6 +46,8 @@ The annotation files for the two datasets are located in the `data/finetune` dir
 
 ### Training
 
+You can download the GeoRSCLIP pre-trained model from [this link](https://huggingface.co/Zilun/GeoRSCLIP/blob/main/ckpt/RS5M_ViT-B-32_RET-2.pt) and place it in the `models/pretrain/` directory.
+
 If you encounter environmental issues, you can modify the `get_dist_launch` function in `run.py`. For example, for a 2-GPU setup:
 
 ```python
