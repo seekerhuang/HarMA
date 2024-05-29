@@ -5,7 +5,7 @@ This repo is the official implementation of "[Efficient Remote Sensing with Harm
 - [Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](#a-harma)
   - [Introduction](#-Introduction)
   - [Implementation](#-Implementation)
-    - [Environment Setup](#EnvironmentSetup)
+    - [Environments](#Environments)
     - [Datasets](#datasets)
     - [Training](#Training)
     - [Testing](#Testing)
@@ -20,7 +20,7 @@ This paper proposes a framework for efficient remote sensing using Harmonized Tr
 
 ## Implementation
 
-### Environment Setup
+### Environments
 
 To set up the environment, run the following command:
 
