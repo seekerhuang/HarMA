@@ -1,5 +1,9 @@
 # HarMA
 
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/efficient-remote-sensing-with-harmonized/cross-modal-retrieval-on-rsitmd)](https://paperswithcode.com/sota/cross-modal-retrieval-on-rsitmd?p=efficient-remote-sensing-with-harmonized)
+
+[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/efficient-remote-sensing-with-harmonized/cross-modal-retrieval-on-rsicd)](https://paperswithcode.com/sota/cross-modal-retrieval-on-rsicd?p=efficient-remote-sensing-with-harmonized)
+
 This repo is the official implementation of "[Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](https://arxiv.org/abs/2404.18253)"(ICLRW 2024).
 
 - [Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](#harma)
