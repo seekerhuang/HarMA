@@ -20,7 +20,7 @@ This repo is the official implementation of "[Efficient Remote Sensing with Harm
 
 This paper proposes a framework for efficient remote sensing using Harmonized Transfer Learning and Modality Alignment (HarMA), addressing key challenges in the field of remote sensing image-text retrieval. HarMA leverages a unified perspective on multimodal transfer learning to enhance task performance, modality alignment, and single-modality uniform alignment. The core innovation lies in the hierarchical multimodal adapter inspired by the human brain's information processing, which integrates shared mini-adapters to improve fine-grained semantic alignment. By employing parameter-efficient fine-tuning, HarMA significantly reduces training overhead while achieving state-of-the-art performance on popular multimodal retrieval tasks without relying on external data or other tricks. This approach outperforms fully fine-tuned models with minimal parameter adjustments, making it a versatile and resource-efficient solution for remote sensing applications. Experiments validate the effectiveness of HarMA, showcasing its potential to enhance vision and language representations in remote sensing tasks.
 
-![pipeline](E:\A-ICLRW-CR\newgitharma\HarMA\assets\pipeline_harma.png)
+![pipeline](assets/pipeline_harma.png)
 
 ## Implementation 💻
 
