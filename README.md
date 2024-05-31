@@ -9,7 +9,7 @@ This repo is the official implementation of "[Efficient Remote Sensing with Harm
 - [Efficient Remote Sensing with Harmonized Transfer Learning and Modality Alignment](#harma)
   - [Introduction 🌍](#introduction-)
   - [Implementation 💻](#implementation-)
-    - [Environments 🛠️](#environments-🛠️)
+    - [Environments 🛠️](#environments-)
     - [Datasets 📚](#datasets-)
     - [Training 📈](#training-)
     - [Testing 🧪](#testing-)
