@@ -77,7 +77,7 @@ python run.py --task 'itr_rsitmd_vit' --dist "f2" --config 'configs/Retrieval_rs
 
 python run.py --task 'itr_rsicd_vit' --dist "f2" --config 'configs/Retrieval_rsicd_vit.yaml' --output_dir './checkpoints/HARMA/test' --checkpoint './checkpoints/HARMA/full_rsicd_vit/checkpoint_best.pth' --evaluate
 
-python run.py --task 'itr_rsitmd_geo' --dist "f2" --config 'configs/Retrieval_rsitmd_geo.yaml' --output_dir './checkpoints/HARMA/test' --checkpoint './checkpoints/HARMA/full_rstimd_geo/checkpoint_best.pth' --evaluate
+python run.py --task 'itr_rsitmd_geo' --dist "f2" --config 'configs/Retrieval_rsitmd_geo.yaml' --output_dir './checkpoints/HARMA/test' --checkpoint './checkpoints/HARMA/full_rsitmd_geo/checkpoint_best.pth' --evaluate
 
 python run.py --task 'itr_rsicd_geo' --dist "f2" --config 'configs/Retrieval_rsicd_geo.yaml' --output_dir './checkpoints/HARMA/test' --checkpoint './checkpoints/HARMA/full_rsicd_geo/checkpoint_best.pth' --evaluate
 ```
