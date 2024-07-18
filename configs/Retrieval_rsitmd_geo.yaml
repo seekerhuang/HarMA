@@ -26,7 +26,7 @@ embed_dim: 512
 temp1: 0.07
 temp2: 0.07
 is_harma: True
-model: 'vit'  
+model: 'geo'  
 save_epoch: True
 save_num_epoch: 10
 

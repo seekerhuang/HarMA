@@ -29,9 +29,10 @@ class HarMA(HarMABase):
     def create_and_load_pretrained(self, config):
         if self.config['model'] == 'geo': 
             self.model, _ ,_ = open_clip.create_model_and_transforms("ViT-B/32",pretrained='openai')
-            ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
-            checkpoint = torch.load(ckpt_path, map_location='cpu')
-            msg = self.model.load_state_dict(checkpoint, strict=False)
+            if self.config['if_evaluation'] == False:
+                ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
+                checkpoint = torch.load(ckpt_path, map_location='cpu')
+                msg = self.model.load_state_dict(checkpoint, strict=False)
         else:
             self.model, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
 
