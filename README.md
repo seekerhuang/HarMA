@@ -70,7 +70,7 @@ python run.py --task 'itr_rsicd_geo' --dist "f2" --config 'configs/Retrieval_rsi
 
 ### Testing 🧪
 
-To evaluate the model, run the following commands:
+To evaluate the model, change `if_evaluation` to `True` in the `configs/yaml`, then run:
 
 ```bash
 python run.py --task 'itr_rsitmd_vit' --dist "f2" --config 'configs/Retrieval_rsitmd_vit.yaml' --output_dir './checkpoints/HARMA/test' --checkpoint './checkpoints/HARMA/full_rsitmd_vit/checkpoint_best.pth' --evaluate
