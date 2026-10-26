@@ -273,7 +273,7 @@ BiShareAdapter = nn.ModuleList([
     for _ in range(12)
 ])
 MMadapter_img = nn.ModuleList([
-    MMadapter(None,hidden_size=768,layer_id=layer_id)
+    MMadapter(BiShareAdapter[layer_id],hidden_size=768,layer_id=layer_id)
     for layer_id in range(12)
 ])
 MMadapter_text = nn.ModuleList([

@@ -3,47 +3,24 @@ import sys
 import time
 import random
 import argparse
+import shlex
 
 from utils.hdfs_io import HADOOP_BIN, hexists, hmkdir, hcopy
 
-def get_dist_launch(args):  # some examples
-
-    if args.dist == 'f4':
-        return "CUDA_VISIBLE_DEVICES=0,1,2,3 WORLD_SIZE=4 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=4 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'f2':
-        return "CUDA_VISIBLE_DEVICES=0,1 WORLD_SIZE=2 /root/miniconda3/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=2 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'f3':
-        return "CUDA_VISIBLE_DEVICES=0,1,2 WORLD_SIZE=3 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=3 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'f12':
-        return "CUDA_VISIBLE_DEVICES=1,2 WORLD_SIZE=2 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=2 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'f02':
-        return "CUDA_VISIBLE_DEVICES=0,2 WORLD_SIZE=2 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=2 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'f03':
-        return "CUDA_VISIBLE_DEVICES=0,3 WORLD_SIZE=2 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=2 " \
-               "--nnodes=1 "
-
-    elif args.dist == 'l2':
-        return "CUDA_VISIBLE_DEVICES=2,3 WORLD_SIZE=2 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9998 --nproc_per_node=2 " \
-               "--nnodes=1 "
-
-    elif args.dist.startswith('gpu'):  # use one gpu, --dist "gpu0"
-        num = int(args.dist[3:])
-        assert 0 <= num <= 8
-        return "CUDA_VISIBLE_DEVICES={:} WORLD_SIZE=1 /home/pjc/.conda/envs/xlvm/bin/python -W ignore -m torch.distributed.launch --master_port 9999 --nproc_per_node=1 " \
-               "--nnodes=1 ".format(num)
-
+def get_dist_launch(args):
+    devices = {'f4': '0,1,2,3', 'f2': '0,1', 'f3': '0,1,2',
+               'f12': '1,2', 'f02': '0,2', 'f03': '0,3', 'l2': '2,3'}
+    if args.dist.startswith('gpu'):
+        device = int(args.dist[3:])
+        if not 0 <= device <= 8:
+            raise ValueError('Invalid GPU index')
+        selected = str(device)
     else:
-        raise ValueError
+        selected = devices[args.dist]
+    count = len(selected.split(','))
+    return (f'CUDA_VISIBLE_DEVICES={selected} WORLD_SIZE={count} '
+            f'{shlex.quote(sys.executable)} -W ignore -m torch.distributed.run '
+            f'--standalone --nnodes=1 --nproc_per_node={count} ')
 
 
 def get_from_hdfs(file_hdfs):
@@ -69,8 +46,9 @@ def get_from_hdfs(file_hdfs):
 def run_retrieval(args):
     dist_launch = get_dist_launch(args)
 
-    os.system(f"{dist_launch} "
-              f"--use_env Retrieval.py --config {args.config} "
+    seed_arg = f"--seed {args.seed} " if args.seed is not None else ""
+    os.system(f"{dist_launch}"
+              f"scripts/train_entry.py {seed_arg}--config {args.config} "
               f"--output_dir {args.output_dir} --bs {args.bs} --checkpoint {args.checkpoint} {'--evaluate' if args.evaluate else ''}")
 
 
@@ -108,12 +86,12 @@ def run(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default='itr_rsitmd')
-    parser.add_argument('--dist', type=str, default='f2', help="see func get_dist_launch for details")
+    parser.add_argument('--task', type=str, default='itr_rsitmd_vit')
+    parser.add_argument('--dist', type=str, default='gpu0', help="see func get_dist_launch for details")
     parser.add_argument('--config', default='configs/Retrieval_rsitmd_vit.yaml', type=str, help="if not given, use default")
-    parser.add_argument('--bs', default=-1, type=int, help="for each gpu, batch_size = bs // num_gpus; "
+    parser.add_argument('--bs', default=428, type=int, help="for each gpu, batch_size = bs // num_gpus; "
                                                   "this option only works for fine-tuning scripts.")
-    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--seed', default=None, type=int)
     parser.add_argument('--checkpoint', default='-1', type=str, help="for fine-tuning")
     parser.add_argument('--load_ckpt_from', default=' ', type=str, help="load domain pre-trained params")
     # write path: local or HDFS
@@ -121,7 +99,6 @@ if __name__ == '__main__':
                                                                       'for pre-training, local and HDFS are both allowed.')
     parser.add_argument('--evaluate', action='store_true', default=False, help="evaluation on downstream tasks")
     args = parser.parse_args()
-    assert hexists(os.path.dirname(args.output_dir))
     hmkdir(args.output_dir)
     run(args)
 

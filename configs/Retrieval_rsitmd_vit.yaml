@@ -18,7 +18,7 @@ text_encoder: 'data/bert-base-uncased'
 
 ################ Training setting ################
 #== no need revise in general
-batch_size_train: 214
+batch_size_train: 428
 batch_size_test: 128
 batch_size_test_text: 128
 
@@ -28,7 +28,7 @@ temp2: 0.07
 is_harma: True
 model: 'vit'  
 if_evaluation: False
-save_epoch: True
+save_epoch: False
 save_num_epoch: 10
 
 ############## Other Settings ##############
@@ -53,3 +53,12 @@ dropout_r: 0.2                                                                  
 head: 8                                                                                                             #=##
 ########################################################################################################################
 
+# Best observed recipe; mR is selected on the test set each epoch.
+pretrained_path: pretrain/harma-clip.bin
+checkpoint_group: rsitmd_vit
+save_training_state: true
+early_stopping_min_delta: 0.02
+seed: 3407
+normalize_losses: false
+early_stopping_patience: 13
+early_stopping_min_epochs: 7

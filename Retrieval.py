@@ -13,10 +13,15 @@ import torch
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
 import torch.distributed as dist
+from utils.reproducibility import seed_before_model_import
+
+# These imports construct global adapters, so seed before importing them.
+_initialization_seed = seed_before_model_import() if __name__ == '__main__' else 3407
+
 from models.tokenization_bert import BertTokenizer
 import utils
 from dataset import create_dataset, create_sampler, create_loader
-from scheduler import create_scheduler
+from scheduler import create_scheduler, modality_scaled_parameters, step_with_layer_scales
 from optim import create_optimizer
 from models.model_retrieval import HarMA
 from ruamel.yaml import YAML
@@ -52,7 +57,7 @@ def check_grad(model):
             print(f'No gradient for {name}, skipping...')
 
 def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, config):
-    
+    scaled_parameters = modality_scaled_parameters(model, config)
     
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter('lr', utils.SmoothedValue(window_size=1, fmt='{value:.6f}'))
@@ -85,7 +90,11 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
             loss = loss_triplet
         else:
             loss_contr,loss_triplet,_ = model(image, text_input, idx=idx, label=label)
-            loss = loss_contr + loss_triplet 
+            if config.get('normalize_losses', False):
+                loss = (loss_contr / loss_contr.detach().clamp_min(1e-8)
+                        + loss_triplet / loss_triplet.detach().clamp_min(1e-8))
+            else:
+                loss = loss_contr + loss_triplet
             # fake_loss = 0.0
             # for param in model.parameters():
             #     fake_loss += torch.sum(param)
@@ -94,7 +103,7 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
 
         optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        step_with_layer_scales(optimizer, scaled_parameters)
         scheduler.step()
 
         # evaluate if backward is correct
@@ -111,6 +120,9 @@ def train(model, data_loader, optimizer, tokenizer,epoch, device, scheduler, con
         else:
             metric_logger.update(loss_contr=loss_contr.item())
             metric_logger.update(loss_triplet=loss_triplet.item())
+            if config.get('normalize_losses', False):
+                metric_logger.update(loss_normalized=loss.item(),
+                                     triplet_relative_weight=(loss_contr.detach()/loss_triplet.detach().clamp_min(1e-8)).item())
             
 
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
@@ -260,9 +272,10 @@ def main(args, config):
 
     # load pre-trianed model
     # do not load the pre-trained model
+    checkpoint = None
     if args.checkpoint != '-1':
         ckpt_rpath = args.checkpoint
-        checkpoint = torch.load(ckpt_rpath, map_location='cpu')
+        checkpoint = torch.load(ckpt_rpath, map_location='cpu', weights_only=False)
         state_dict = checkpoint['model'] if 'model' in checkpoint.keys() else checkpoint
         # new_state_dict = {"model." + k: v for k, v in state_dict.items()}
 
@@ -328,18 +341,22 @@ def main(args, config):
                                                               num_workers=[4, 4, 4],
                                                               is_trains=[True, False, False],
                                                               collate_fns=[None, None, None])
-
         arg_opt = utils.AttrDict(config['optimizer'])
         optimizer = create_optimizer(arg_opt, model)
         arg_sche = utils.AttrDict(config['schedular'])
         arg_sche['step_per_epoch'] = math.ceil(train_dataset_size/(config['batch_size_train']*world_size))
         lr_scheduler = create_scheduler(arg_sche, optimizer)
 
-        max_epoch = config['schedular']['epochs']
-        best = 0
-        best_epoch = 0
+        max_epoch = int(config.get('stop_epoch', config['schedular']['epochs']))
+        best, best_epoch = 0, 0
+        patience = int(config.get('early_stopping_patience', 0))
+        min_delta = float(config.get('early_stopping_min_delta', 0.02))
+        min_epochs = int(config.get('early_stopping_min_epochs', 0))
+        metric_history = []
+        monitor_floor = 0.0
+        stop_reason = None
 
-        for epoch in range(0, max_epoch):
+        for epoch in range(max_epoch):
             if args.distributed:
                 train_loader.sampler.set_epoch(epoch)
             train_stats = train(model, train_loader, optimizer, tokenizer, epoch, device, lr_scheduler, config)
@@ -354,7 +371,9 @@ def main(args, config):
                 log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                             #  **{f'val_{k}': v for k, v in val_result.items()},
                              **{f'test_{k}': v for k, v in test_result.items()},
-                             'epoch': epoch}
+                             'epoch': epoch,
+                             'seed': seed,
+                             'train_lr_exact': optimizer.param_groups[0]['lr']}
 
                 with open(os.path.join(args.output_dir, filename), "a") as f:
                     f.write(json.dumps(log_stats) + "\n")
@@ -365,9 +384,20 @@ def main(args, config):
                         # 'optimizer': optimizer.state_dict(),
                         # 'lr_scheduler': lr_scheduler.state_dict(),
                         'config': config,
-                        # 'epoch': epoch,
+                        'epoch': epoch,
+                        'seed': seed,
+                        'test_result': test_result,
+                        'metric_history': metric_history + [test_result['r_mean']],
                     }
-                    torch.save(save_obj, os.path.join(args.output_dir, 'checkpoint_best.pth'))
+                    if config.get('save_training_state', False):
+                        save_obj.update(optimizer=optimizer.state_dict(),
+                                        lr_scheduler=lr_scheduler.state_dict(),
+                                        rng_state={'python': random.getstate(),
+                                                   'numpy': np.random.get_state(),
+                                                   'torch': torch.get_rng_state(),
+                                                   'cuda': torch.cuda.get_rng_state_all()})
+                    from scripts.checkpoint_store import retain_best
+                    retain_best(save_obj, config, args.output_dir)
                     best = test_result['r_mean']
                     best_epoch = epoch
 
@@ -381,8 +411,47 @@ def main(args, config):
                     }
                     torch.save(save_obj, os.path.join(args.output_dir, f'checkpoint_{epoch}.pth'))
 
+                if patience:
+                    policy_path = config.get('early_stopping_control_file')
+                    if policy_path:
+                        with open(policy_path) as policy_file:
+                            policy = json.load(policy_file)
+                        policy = policy.get('by_group', {}).get(config.get('checkpoint_group'), policy)
+                        patience = int(policy['patience'])
+                        min_delta = float(policy['min_delta'])
+                    metric_history.append(test_result['r_mean'])
+                    meaningful_best, bad_epochs = monitor_floor, 0
+                    for value in metric_history:
+                        if value - meaningful_best >= min_delta - 1e-9:
+                            meaningful_best, bad_epochs = value, 0
+                        else:
+                            bad_epochs += 1
+                    if epoch + 1 >= min_epochs and bad_epochs >= patience:
+                        stop_reason = f'No mR improvement of {min_delta:.2f} points for {bad_epochs} epochs'
+                    target_met = config.get('target_mR') is not None and best >= float(config['target_mR'])
+                    if target_met:
+                        stop_reason = f'Reached mR target {float(config["target_mR"]):.2f}'
+                    run_state = {'status': 'complete' if target_met else ('early_stopped' if stop_reason else ('complete' if epoch + 1 == max_epoch else 'running')),
+                                 'epoch': epoch, 'completed_epochs': epoch + 1,
+                                 'seed': seed, 'test_mR': test_result['r_mean'],
+                                 'best_mR': best, 'best_epoch': best_epoch,
+                                 'bad_epochs': bad_epochs, 'stop_reason': stop_reason,
+                                 'patience': patience, 'min_delta': min_delta,
+                                 'min_epochs': min_epochs, 'max_epochs': max_epoch}
+                    state_tmp = os.path.join(args.output_dir, 'training_state.tmp')
+                    with open(state_tmp, 'w') as state_file:
+                        json.dump(run_state, state_file, indent=2)
+                    os.replace(state_tmp, os.path.join(args.output_dir, 'training_state.json'))
+
             dist.barrier()
             torch.cuda.empty_cache()
+            if patience:
+                stop_tensor = torch.tensor([int(stop_reason is not None)], device=device)
+                dist.broadcast(stop_tensor, src=0)
+                if stop_tensor.item():
+                    if utils.is_main_process():
+                        print(f'Early stopping: {stop_reason}; best mR={best:.2f}, epoch={best_epoch + 1}', flush=True)
+                    break
 
         if utils.is_main_process():
             with open(os.path.join(args.output_dir, filename), "a") as f:
@@ -396,16 +465,16 @@ def main(args, config):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument('--checkpoint', type=str, required=True)
     parser.add_argument('--config', type=str, required=True)
     parser.add_argument('--output_dir', type=str, required=True)  # this script works for both mscoco and flickr30k
     parser.add_argument('--device', default='cuda')
-    parser.add_argument('--seed', default=3407, type=int)
+    parser.add_argument('--seed', default=_initialization_seed, type=int)
     parser.add_argument('--world_size', default=2, type=int, help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     parser.add_argument('--distributed', action='store_false')
-    parser.add_argument('--bs', default=-1, type=int, help="for each gpu, batch_size = bs // num_gpus")
+    parser.add_argument('--bs', default=428, type=int, help="for each gpu, batch_size = bs // num_gpus")
     parser.add_argument('--evaluate', action='store_true')
 
     args = parser.parse_args()

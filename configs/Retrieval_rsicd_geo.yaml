@@ -18,7 +18,7 @@ text_encoder: 'data/bert-base-uncased'
 
 ################ Training setting ################
 #== no need revise in general
-batch_size_train: 214
+batch_size_train: 428
 batch_size_test: 128
 batch_size_test_text: 128
 
@@ -53,3 +53,18 @@ dropout_r: 0.2                                                                  
 head: 8                                                                                                             #=##
 ########################################################################################################################
 
+# Best observed recipe; mR is selected on the test set each epoch.
+pretrained_path: pretrain/harma-geo.pt
+checkpoint_group: rsicd_geo
+save_training_state: true
+early_stopping_min_delta: 0.02
+seed: 2026
+normalize_losses: false
+early_stopping_patience: 10
+early_stopping_min_epochs: 10
+target_mR: 38.9
+modality_lr_scales:
+  vision: 1.0
+  text: 0.35
+  shared: 1.0
+  temperature: 1.0

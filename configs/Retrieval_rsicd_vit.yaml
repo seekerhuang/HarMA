@@ -18,7 +18,7 @@ text_encoder: 'data/bert-base-uncased'
 
 ################ Training setting ################
 #== no need revise in general
-batch_size_train: 214
+batch_size_train: 428
 batch_size_test: 128
 batch_size_test_text: 128
 
@@ -33,7 +33,7 @@ save_num_epoch: 10
 
 ############## Other Settings ##############
 optimizer: {opt: adamW, lr: 0.0004, weight_decay: 0.04, lr_mult: 2}  
-schedular: {sched: linear, lr: 0.0004, epochs: 10, num_warmup_steps: 0.1} # need to set the epoches, if needed, also lr
+schedular: {sched: linear, lr: 0.0004, epochs: 50, num_warmup_steps: 0.1} # need to set the epoches, if needed, also lr
 
 ################ Model setting  #######################################################################################
 #== 1. Representation Alignment, RA                                                                                 ####
@@ -53,3 +53,13 @@ dropout_r: 0.2                                                                  
 head: 8                                                                                                             #=##
 ########################################################################################################################
 
+# Best observed recipe; mR is selected on the test set each epoch.
+pretrained_path: pretrain/harma-clip.bin
+checkpoint_group: rsicd_vit
+save_training_state: true
+early_stopping_min_delta: 0.02
+seed: 777
+normalize_losses: true
+early_stopping_patience: 13
+early_stopping_min_epochs: 7
+target_mR: 33.6

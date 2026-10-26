@@ -28,13 +28,15 @@ class HarMA(HarMABase):
 
     def create_and_load_pretrained(self, config):
         if self.config['model'] == 'geo': 
-            self.model, _ ,_ = open_clip.create_model_and_transforms("ViT-B/32",pretrained='openai')
+            self.model, _ ,_ = open_clip.create_model_and_transforms(
+                "ViT-B/32", pretrained=None, force_quick_gelu=True)
             if self.config['if_evaluation'] == False:
-                ckpt_path = "./pretrain/RS5M_ViT-B-32_RET-2.pt"
-                checkpoint = torch.load(ckpt_path, map_location='cpu')
+                ckpt_path = config.get('pretrained_path', "./pretrain/RS5M_ViT-B-32_RET-2.pt")
+                checkpoint = torch.load(ckpt_path, map_location='cpu', weights_only=False)
                 msg = self.model.load_state_dict(checkpoint, strict=False)
         else:
-            self.model, _, _ = open_clip.create_model_and_transforms("ViT-B/32")
+            self.model, _, _ = open_clip.create_model_and_transforms(
+                "ViT-B/32", pretrained=config.get('pretrained_path', 'laion2b_s34b_b79k'))
 
     def get_vis_emb(self, image, idx=None, label=None):
         if self.config['is_harma']:
